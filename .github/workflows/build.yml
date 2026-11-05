@@ -5,34 +5,45 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
-defaults:
-  run:
-    working-directory: mr-shell/mr-shell
 jobs:
   apk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Localizar pasta do app
+        run: |
+          echo "=== Estrutura do repositório ==="
+          find . -not -path './.git/*' -not -path '*/node_modules/*' | head -80
+          D=$(find . -name capacitor.config.json -not -path '*/node_modules/*' | head -1 | xargs -r dirname | sed 's|^\./||')
+          if [ -z "$D" ]; then echo "ERRO: capacitor.config.json não encontrado. Suba o projeto completo."; exit 1; fi
+          echo "APP_DIR=$D" >> $GITHUB_ENV
+          echo "App encontrado em: $D"
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - run: npm install
+        working-directory: ${{ env.APP_DIR }}
       - run: bash scripts/prepare.sh
+        working-directory: ${{ env.APP_DIR }}
       - run: npx cap add android
+        working-directory: ${{ env.APP_DIR }}
       - name: Permissões e orientação
+        working-directory: ${{ env.APP_DIR }}
         run: |
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's|<application|<uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <application|' $M
           sed -i 's|<activity|<activity android:screenOrientation="landscape"|' $M
       - run: npx cap sync android
+        working-directory: ${{ env.APP_DIR }}
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+        working-directory: ${{ env.APP_DIR }}
       - uses: actions/upload-artifact@v4
         with:
           name: mr-shell-apk
-          path: mr-shell/mr-shell/android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.APP_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: MR Shell (último APK)
-          files: mr-shell/mr-shell/android/app/build/outputs/apk/debug/app-debug.apk
+          files: ${{ env.APP_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
