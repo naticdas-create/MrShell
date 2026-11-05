@@ -2,5 +2,5 @@
   "appId": "com.mrshell.app",
   "appName": "MR Shell",
   "webDir": "www",
-  "server": { "url": "https://Lunaro.github.io/NOMEDOREPO/" }
+  "server": { "url": "https://naticdas-create.github.io/MrShell/" }
 }
