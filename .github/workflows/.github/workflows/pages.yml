@@ -16,16 +16,20 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.d.outputs.page_url }}
-    defaults:
-      run:
-        working-directory: mr-shell/mr-shell
     steps:
       - uses: actions/checkout@v4
+      - name: Localizar pasta do app
+        run: |
+          D=$(find . -name capacitor.config.json -not -path '*/node_modules/*' | head -1 | xargs -r dirname | sed 's|^\./||')
+          if [ -z "$D" ]; then echo "ERRO: capacitor.config.json não encontrado"; exit 1; fi
+          echo "APP_DIR=$D" >> $GITHUB_ENV
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm install
+        working-directory: ${{ env.APP_DIR }}
       - run: bash scripts/prepare.sh
+        working-directory: ${{ env.APP_DIR }}
       - uses: actions/upload-pages-artifact@v3
-        with: { path: mr-shell/mr-shell/www }
+        with: { path: "${{ env.APP_DIR }}/www" }
       - id: d
         uses: actions/deploy-pages@v4
